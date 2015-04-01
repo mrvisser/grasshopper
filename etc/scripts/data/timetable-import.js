@@ -71,7 +71,7 @@ var config = require('../../../config');
                                         "5875": {
                                             "id": "5875",
                                             "name": "Practicals - Monday Group",
-                                            "type": "serie",
+                                            "type": "series",
                                             "nodes": {
                                                 "49794": {
                                                     "id": "49794",
@@ -84,9 +84,6 @@ var config = require('../../../config');
     ...
 
  * ```
- *
- * This currently works by spinning up an application container, but
- * will eventually be migrated to use the REST apis
  */
 
 var argv = yargs
@@ -142,7 +139,7 @@ GrassHopper.init(config, function(err) {
                 createNodes(ctx, courses, null, function() {
 
                     // All done, simply exit
-                    log().info('The organizational tree has been succesfully imported');
+                    log().info('The organizational tree has been successfully imported');
                     process.exit(0);
                 });
             });
@@ -153,6 +150,7 @@ GrassHopper.init(config, function(err) {
 /**
  * Recursively create the organizational units for a set of nodes.
  *
+ * @param  {Context}            ctx                 Standard context containing the current user and the current app
  * @param  {Node[]}             nodes               A set of nodes to create
  * @param  {OrgUnit|Serie}      [parent]            The parent under which the nodes should be created
  * @param  {Function}           callback            Standard callback function
@@ -180,6 +178,7 @@ var createNodes = function(ctx, nodes, parent, callback) {
 /**
  * Create an organizational unit
  *
+ * @param  {Context}            ctx             Standard context containing the current user and the current app
  * @param  {Node}               node            The node to create
  * @param  {OrgUnit|Serie}      [parent]        The parent under which the node should be created
  * @param  {Function}           callback        Standard callback function
@@ -187,8 +186,8 @@ var createNodes = function(ctx, nodes, parent, callback) {
 var createNode = function(ctx, node, parent, callback) {
     if (node.type === 'course' || node.type === 'subject' || node.type === 'part' || node.type === 'module') {
         createOrgUnit(ctx, node, parent, callback);
-    } else if (node.type === 'serie') {
-        createSerie(ctx, node, parent, callback);
+    } else if (node.type === 'series') {
+        createSeries(ctx, node, parent, callback);
     } else if (node.type === 'event') {
         createEvent(ctx, node, parent, callback);
     }
@@ -215,10 +214,7 @@ var createOrgUnit = function(ctx, node, parent, callback) {
     }
     OrgUnitAPI.createOrgUnit(ctx, argv.app, node.name.substring(0, 255), node.type, null, null, null, groupId, parentId, function(err, orgunit) {
         if (err) {
-            console.log(err);
-            console.log("DisplayName: '%s'", node.name);
-            console.log("type: '%s'", node.type);
-            log().error({'err': err}, 'Failed to create orgunit');
+            log().error({'err': err, 'name': node.name}, 'Failed to create organisational unit');
             process.exit(1);
         }
 
@@ -227,27 +223,23 @@ var createOrgUnit = function(ctx, node, parent, callback) {
 };
 
 /**
- * Create a serie
+ * Create a series
  *
  * @param  {Context}    ctx             Standard context object containing the current user and the current application
  * @param  {Node}       node            The node to create
- * @param  {OrgUnit     parent          The organisational unit under which the serie should be created
+ * @param  {OrgUnit}    parent          The organisational unit under which the series should be created
  * @param  {Function}   callback        Standard callback function
  */
-var createSerie = function(ctx, node, parent, callback) {
+var createSeries = function(ctx, node, parent, callback) {
     SeriesAPI.createSerie(ctx, argv.app, node.name.substring(0, 255), null, parent.GroupId, function(err, serie) {
         if (err) {
-            console.log(err);
-            console.log("DisplayName: '%s'", node.name);
-            log().error({'err': err}, 'Failed to create serie');
+            log().error({'err': err, 'name': node.name}, 'Failed to create series');
             process.exit(1);
         }
 
         parent.addSeries(serie).complete(function(err) {
             if (err) {
-                console.log(err);
-                console.log("DisplayName: '%s'", node.name);
-                log().error({'err': err}, 'Failed to add serie to orgunit');
+                log().error({'err': err, 'name': node.name}, 'Failed to add series to organisational unit');
                 process.exit(1);
             }
 
@@ -279,9 +271,7 @@ var createEvent = function(ctx, node, parent, callback) {
     };
     EventsAPI.createEvent(ctx, argv.app, node.name.substring(0, 255), start, end, opts, function(err, event) {
         if (err) {
-            console.log(err);
-            console.log("DisplayName: '%s'", node.name);
-            log().error({'err': err}, 'Failed to create event');
+            log().error({'err': err, 'name': node.name}, 'Failed to create event');
             process.exit(1);
         }
 
