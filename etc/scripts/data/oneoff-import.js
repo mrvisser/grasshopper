@@ -35,8 +35,12 @@ var config = require('../../../config');
 
 /*
  * This script allows you to import a tree of courses, subjects,
- * parts, modules, series and events. The tree should be formatted
- * in the following manner:
+ * parts, modules, series and events.
+ *
+ * This script will do a straight import. It will not attempt any disambiguation or linking with
+ * existing courses, subjects, parts, modules, series or events.
+ *
+ * The tree should be formatted in the following manner:
  *
  * ```json
  * {
