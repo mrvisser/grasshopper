@@ -178,7 +178,6 @@ var createNodes = function(ctx, nodes, parent, callback) {
     });
 };
 
-
 /**
  * Create an organizational unit
  *
