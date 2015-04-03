@@ -81,6 +81,7 @@ var config = require('../../../config');
                                                     "id": "49794",
                                                     "name": "PCR",
                                                     "type": "event",
+                                                    "location": "Lecture Room 1",
                                                     "event-type": "practical",
                                                     "start": "2015-02-23T11:00:00+00:00",
                                                     "end": "2015-02-23T17:00:00+00:00"
@@ -270,7 +271,8 @@ var createEvent = function(ctx, node, parent, callback) {
     }
     var opts = {
         'group': parent.GroupId,
-        'series': [parent.id]
+        'series': [parent.id],
+        'location': node.location
     };
     EventsAPI.createEvent(ctx, argv.app, node.name.substring(0, 255), start, end, opts, function(err, event) {
         if (err) {

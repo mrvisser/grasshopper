@@ -35,7 +35,7 @@ var PatternConstants = require('./pattern/constants');
 
 var argv = yargs
     .usage('Convert a timetable-django CSV export into a an organisational unit tree.\nUsage: $0')
-    .example('$0 --input events.csv --output tree.json', 'Convert events.csv into tree.json')
+    .example('$0 --input events.csv --output tree.json --from 2014 --to 2015', 'Convert events.csv into tree.json')
     .demand('i')
     .alias('i', 'input')
     .describe('i', 'The path where the CSV file can be read')
@@ -48,6 +48,8 @@ var argv = yargs
     .demand('t')
     .alias('t', 'to')
     .describe('t', 'The academical year the dates should be outputted in')
+    .alias('d', 'debug')
+    .describe('d', 'Print the tree to standard out')
     .argv;
 
 var FROM = argv.from;
@@ -55,7 +57,7 @@ var TO = argv.to;
 
 // Parse the CSV file
 var options = {
-    'columns': ['TriposId', 'TriposName', 'PartId', 'PartName', 'SubPartId', 'SubPartName', 'ModuleId', 'ModuleName', 'SerieId', 'SerieName', 'EventId', 'EventTitle', 'EventType', 'EventStartDateTime', 'EventEndDateTime']
+    'columns': ['TriposId', 'TriposName', 'PartId', 'PartName', 'SubPartId', 'SubPartName', 'ModuleId', 'ModuleName', 'SerieId', 'SerieName', 'EventId', 'EventTitle', 'EventType', 'EventStartDateTime', 'EventEndDateTime', 'EventLocation', 'EventPeople']
 };
 var parser = csv.parse(options, function(err, output) {
     // Shift out the headers
@@ -72,7 +74,9 @@ var parser = csv.parse(options, function(err, output) {
     writeTree(tree);
 
     // Print it to standard out
-    printTree(tree);
+    if (argv.d) {
+        printTree(tree);
+    }
 });
 
 // Pipe the CSV file to the parser
@@ -190,7 +194,7 @@ var generateTree = function(output) {
             'nodes': {}
         };
 
-        // Serie
+        // Series
         node.nodes[partId].nodes[item.ModuleId].nodes[item.SerieId] = node.nodes[partId].nodes[item.ModuleId].nodes[item.SerieId] || {
             'id': item.SerieId,
             'name': item.SerieName,
@@ -205,7 +209,9 @@ var generateTree = function(output) {
             'type': 'event',
             'event-type': item.EventType,
             'start': convertTimestamp(item.EventStartDateTime),
-            'end': convertTimestamp(item.EventEndDateTime)
+            'end': convertTimestamp(item.EventEndDateTime),
+            'location': item.EventLocation,
+            'people': item.EventPeople.split('#')
         };
 
         prevCourse = item.TriposId;
