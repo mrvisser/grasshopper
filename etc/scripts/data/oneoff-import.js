@@ -29,6 +29,7 @@ var EventsAPI = require('gh-events');
 var GrassHopper = require('gh-core/lib/api');
 var log = require('gh-core/lib/logger').logger('scripts/orgunit-import');
 var OrgUnitAPI = require('gh-orgunit');
+var UsersDAO = require('gh-users/lib/internal/dao');
 var SeriesAPI = require('gh-series');
 
 var config = require('../../../config');
@@ -272,14 +273,54 @@ var createEvent = function(ctx, node, parent, callback) {
     var opts = {
         'group': parent.GroupId,
         'series': [parent.id],
-        'location': node.location
+        'location': node.location,
+        'organiserOther': []
     };
-    EventsAPI.createEvent(ctx, argv.app, node.name.substring(0, 255), start, end, opts, function(err, event) {
+
+    // Split the organisers in two sets. One for plain-text organisers, one for linked by shib ids
+    var organisers = _.partition(node.people, function(person) {
+        return _.isString(person);
+    });
+    if (!_.isEmpty(organisers[0])) {
+        opts.organiserOther = _.compact(organisers[0]);
+    }
+
+    var shibbolethIds = _.map(organisers[1], function(organiser) {
+        return organiser.shibbolethId;
+    });
+
+    // Get the linked users
+    UsersDAO.getUsersByShibbolethId(argv.app, shibbolethIds, function(err, users) {
         if (err) {
-            log().error({'err': err, 'name': node.name}, 'Failed to create event');
+            log().error({'err': err, 'name': node.name}, 'Failed to get users by their shibboleth id');
             process.exit(1);
+        } else if (users.length !== shibbolethIds.length) {
+            log().warn({'organisers': shibbolethIds}, 'Could not find all users by their shibboleth id');
+
+            // Fall back to the displayName for those users that could not be found. If the import
+            // user script ran successfully, this should not happen though
+            _.each(organisers[1], function(organiser) {
+                var user = _.find(users, function(user) {
+                    return (user.shibbolethId === organiser.shibbolethId);
+                });
+                if (!user) {
+                    opts.organiserOther.push(organiser.displayName);
+                }
+            });
         }
 
-        return callback(event);
+        opts.organiserUsers = _.map(users, function(user) {
+            return user.id;
+        });
+
+        // Create the event
+        EventsAPI.createEvent(ctx, argv.app, node.name.substring(0, 255), start, end, opts, function(err, event) {
+            if (err) {
+                log().error({'err': err, 'name': node.name}, 'Failed to create event');
+                process.exit(1);
+            }
+
+            return callback(event);
+        });
     });
 };
