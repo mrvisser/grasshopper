@@ -202,6 +202,29 @@ var generateTree = function(output) {
             'nodes': {}
         };
 
+        // The set of organisers will be concatenated by a `#` character by the django command. However,
+        // it seems that there were quite a few people who annotated their own data by using a `/` or
+        // simply by using ` and `. We try to catch all these use-cases
+        var people = _.chain(item.EventPeople.split('#'))
+            .map(function(person) {
+                // Split again on / as lots of administrators seem to use this
+                return person.split('/');
+            })
+            .flatten()
+
+            .map(function(person) {
+                // Split again on ' and '
+                return person.split(' and ');
+            })
+            .flatten()
+
+            // Trim off leading and trailing whitespace
+            .map(function(person) {
+                return person.trim().replace(/,/g, '');
+            })
+            .compact()
+            .value();
+
         // Event
         node.nodes[partId].nodes[item.ModuleId].nodes[item.SerieId].nodes[item.EventId] = node.nodes[partId].nodes[item.ModuleId].nodes[item.SerieId].nodes[item.EventId] || {
             'id': item.EventId,
@@ -211,7 +234,7 @@ var generateTree = function(output) {
             'start': convertTimestamp(item.EventStartDateTime),
             'end': convertTimestamp(item.EventEndDateTime),
             'location': item.EventLocation,
-            'people': item.EventPeople.split('#')
+            'people': people
         };
 
         prevCourse = item.TriposId;
